@@ -1,0 +1,76 @@
+name: Website
+
+# The site reads @tarve/core from its sources (`../packages/core/src`: API extraction, playground,
+# WebAssembly build), so CI lays the repos out as a developer does: omarcosr/tarve at the
+# workspace root and this repo in `website/`. Deploy is deploy.yml.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  # Core changes can break the playground stand-ins without touching this repo: check
+  # against tarve@main once a day as well (GitHub has no cross-repo push event without a token).
+  schedule:
+    - cron: "17 6 * * *"
+  repository_dispatch:
+    types: [tarve-core-updated]
+  workflow_dispatch:
+    inputs:
+      core-ref:
+        description: "omarcosr/tarve ref to check against"
+        default: "main"
+
+concurrency:
+  group: tarve-website-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, docs and playground
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout omarcosr/tarve
+        uses: actions/checkout@v7
+        with:
+          repository: omarcosr/tarve
+          ref: ${{ inputs.core-ref || github.event.client_payload.ref || 'main' }}
+
+      - name: Checkout website
+        uses: actions/checkout@v7
+        with:
+          path: website
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.5"
+
+      - name: Cache Bun packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: bun-website-${{ runner.os }}-${{ hashFiles('bun.lock', 'website/bun.lock') }}
+          restore-keys: bun-website-${{ runner.os }}-
+
+      # The site reads @tarve/core sources and the core TypeScript (scripts/check-docs.ts).
+      - name: Install JS dependencies
+        run: |
+          bun install --frozen-lockfile
+          bun install --cwd website --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: website
+        run: bun run typecheck
+
+      - name: API surface and docs catalog
+        working-directory: website
+        run: |
+          bun run docs:api
+          bun run docs:check
+
+      # Builds @tarve/core and every documentation example for the browser with the playground
+      # stand-ins and renders each one (moved here from the core repo's scripts/).
+      - name: Playground
+        working-directory: website
+        run: bun run test:playground

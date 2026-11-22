@@ -13,6 +13,7 @@
     "docs:agents": "bun scripts/build-agents.ts",
     "docs:previews": "bun --cwd scripts/previews capture.tsx",
     "docs:interactions": "bun --cwd scripts/previews interactions.tsx",
+    "test:playground": "bun test ./scripts/playground.test.ts",
     "dev": "vite",
     "build": "bun run build:wasm && bun run docs:api && bun run docs:agents && bun run build:client && bun run build:server",
     "build:client": "vite build --mode client",
