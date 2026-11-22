@@ -56,7 +56,8 @@ jobs:
       # The site reads @tarve/core sources and the core TypeScript (scripts/check-docs.ts).
       - name: Install JS dependencies
         run: |
-          bun install --frozen-lockfile
+          # Not frozen for the core checkout: its lockfile is the core repo's business, not a site failure.
+          bun install
           bun install --cwd website --frozen-lockfile
 
       - name: Typecheck

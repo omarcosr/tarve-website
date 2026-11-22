@@ -73,7 +73,8 @@ jobs:
       - name: Install dependencies
         if: steps.credentials.outputs.deploy == 'true'
         run: |
-          bun install --frozen-lockfile
+          # Not frozen for the core checkout: its lockfile is the core repo's business, not a site failure.
+          bun install
           cd website && bun install --frozen-lockfile
 
       - name: Build and deploy
